@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Início da Avaliação</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+
+        <h2>Avaliação Psicossocial</h2>
+        <div class="aviso-etico">
+            <h3>⚠️ Aviso Ético Importante</h3>
+            <ul>
+                <li>A participação é <strong>voluntária</strong>. Ninguém deve se sentir pressionado a participar.</li>
+                <li>O questionário é <strong>anônimo</strong>. As respostas individuais não poderão ser identificadas.</li>
+                <li>Os resultados são calculados de forma <strong>coletiva</strong>, por grupos.</li>
+                <li>Todos os participantes terão acesso aos <strong>resultados globais</strong>.</li>
+                <li>A avaliação se refere ao <strong>local de trabalho e seus setores</strong>, e não aos indivíduos.</li>
+            </ul>
+        </div>
+        <form method="POST">
+                    <p class="subtitle">
+            Inicie o questionário informando o nome da empresa avaliada.
+        </p>
+            <label for="empresa">Nome da empresa</label>
+            <input
+                type="text"
+                id="empresa"
+                name="empresa"
+                placeholder="Digite o nome da empresa"
+                required
+            >
+
+            <button type="submit">Iniciar questionário</button>
+        </form>
+
+    </div>
+</div>
+
+</body>
+</html>

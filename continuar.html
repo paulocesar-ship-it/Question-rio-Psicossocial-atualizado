@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Continuar Avaliação</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+
+        <h2>Respostas registradas com sucesso</h2>
+
+        <p class="subtitle">
+            A avaliação psicossocial da empresa abaixo está em andamento.
+        </p>
+
+        <div class="info-box">
+            <p><strong>Empresa avaliada:</strong></p>
+            <p class="empresa-nome">{{ empresa }}</p>
+
+            <p class="participantes">
+                Total de participantes até agora: <strong>{{ total }}</strong>
+            </p>
+        </div>
+
+        <div class="acoes">
+            <form action="/novo" method="get">
+                <button type="submit" class="btn-secundario">
+                    Adicionar novo participante
+                </button>
+            </form>
+
+            <form action="/finalizar" method="get">
+                <button type="submit" class="btn-primario">
+                    Finalizar questionário
+                </button>
+            </form>
+        </div>
+
+    </div>
+</div>
+
+</body>
+</html>

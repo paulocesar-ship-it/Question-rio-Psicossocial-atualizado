@@ -1,0 +1,305 @@
+/* RESET BÁSICO */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* FUNDO DA PÁGINA */
+body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #f8fafc;
+}
+
+/* CONTAINER CENTRAL */
+.container {
+    width: 100%;
+    max-width: 480px;
+    padding: 20px;
+}
+
+/* CARD PRINCIPAL */
+.card {
+    background: #020617;
+    border-radius: 16px;
+    padding: 40px 35px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    text-align: center;
+}
+
+/* TÍTULO */
+.card h2 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: #e5e7eb;
+}
+
+/* SUBTÍTULO */
+.subtitle {
+    font-size: 1.1rem;
+    margin-bottom: 32px;
+    color: #cbd5f5;
+    line-height: 1.5;
+}
+
+/* FORMULÁRIO */
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+/* LABEL */
+label {
+    font-size: 1rem;
+    text-align: left;
+    color: #c7d2fe;
+}
+
+/* INPUT */
+input[type="text"] {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 1.05rem;
+    border-radius: 10px;
+    border: 1px solid #334155;
+    background: #020617;
+    color: #f8fafc;
+    outline: none;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+input[type="text"]::placeholder {
+    color: #64748b;
+}
+
+input[type="text"]:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+}
+
+/* BOTÃO */
+button {
+    margin-top: 10px;
+    padding: 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    color: #ffffff;
+    transition: transform 0.2s, box-shadow 0.2s, background 0.3s;
+}
+
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 25px rgba(79, 70, 229, 0.5);
+    background: linear-gradient(135deg, #818cf8, #6366f1);
+}
+
+button:active {
+    transform: translateY(0);
+    box-shadow: 0 6px 15px rgba(79, 70, 229, 0.4);
+}
+
+/* RESPONSIVIDADE */
+@media (max-width: 480px) {
+    .card {
+        padding: 30px 25px;
+    }
+
+    .card h2 {
+        font-size: 1.9rem;
+    }
+}
+
+/* ============================= */
+/* CONTAINER GERAL DO QUESTIONÁRIO */
+/* ============================= */
+
+.cards-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 30px 20px 120px;
+}
+
+/* ============================= */
+/* CARD DE CADA PERGUNTA */
+/* ============================= */
+
+.pergunta-card {
+    background: #020617;
+    border-radius: 16px;
+    padding: 32px 28px;
+    margin-bottom: 28px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+
+/* ============================= */
+/* TEXTO DA PERGUNTA */
+/* ============================= */
+
+.pergunta-texto {
+    font-size: 1.35rem;       /* GRANDE, mas elegante */
+    line-height: 1.55;        /* RESPIRA */
+    font-weight: 600;
+    color: #f1f5f9;
+    margin-bottom: 22px;
+}
+
+/* ============================= */
+/* OPÇÕES */
+/* ============================= */
+
+.opcoes {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* CADA OPÇÃO */
+.opcao {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1.1rem;
+    color: #e5e7eb;
+    cursor: pointer;
+    padding: 10px 12px;
+    border-radius: 10px;
+    transition: background 0.2s;
+}
+
+.opcao:hover {
+    background: rgba(99, 102, 241, 0.12);
+}
+
+/* RADIO BUTTON */
+.opcao input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    accent-color: #6366f1;
+    cursor: pointer;
+}
+
+/* ============================= */
+/* BOTÃO ENVIAR */
+/* ============================= */
+
+.btn-enviar {
+    position: fixed;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 18px 40px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    border-radius: 14px;
+    border: none;
+    cursor: pointer;
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    color: #ffffff;
+    box-shadow: 0 15px 35px rgba(79, 70, 229, 0.5);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-enviar:hover {
+    transform: translateX(-50%) translateY(-2px);
+    box-shadow: 0 20px 45px rgba(79, 70, 229, 0.6);
+}
+
+.btn-enviar:active {
+    transform: translateX(-50%) translateY(0);
+}
+
+/* ============================= */
+/* ACESSIBILIDADE MOBILE */
+/* ============================= */
+
+@media (max-width: 600px) {
+    .pergunta-texto {
+        font-size: 1.2rem;
+    }
+
+    .opcao {
+        font-size: 1.05rem;
+    }
+}
+
+/* Template do continuar.html */
+
+/* CAIXA DE INFORMAÇÕES */
+.info-box {
+    background: #020617;
+    border: 1px solid #1e293b;
+    border-radius: 14px;
+    padding: 20px;
+    margin: 30px 0;
+    text-align: center;
+}
+
+/* NOME DA EMPRESA */
+.empresa-nome {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #818cf8;
+    margin: 8px 0 18px;
+    word-break: break-word;
+}
+
+/* PARTICIPANTES */
+.participantes {
+    font-size: 1.1rem;
+    color: #e5e7eb;
+}
+
+/* AÇÕES */
+.acoes {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    margin-top: 25px;
+}
+
+/* BOTÕES */
+.btn-primario,
+.btn-secundario {
+    width: 100%;
+    padding: 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s, background 0.3s;
+}
+
+/* BOTÃO FINALIZAR */
+.btn-primario {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: #022c22;
+}
+
+.btn-primario:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 25px rgba(34, 197, 94, 0.5);
+}
+
+/* BOTÃO CONTINUAR */
+.btn-secundario {
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    color: #ffffff;
+}
+
+.btn-secundario:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 25px rgba(79, 70, 229, 0.5);
+}
+

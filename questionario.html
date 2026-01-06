@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Questionário Psicossocial</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<form method="POST">
+    <div class="cards-container">
+
+        {% for id, texto, escala_key, invertida in perguntas %}
+        <div class="pergunta-card">
+
+            <p class="pergunta-texto">
+                <strong>{{ loop.index }})</strong> {{ texto }}
+            </p>
+
+            <div class="opcoes">
+                {% set opcoes = ESCALAS[escala_key] %}
+
+                {% for i in range(opcoes|length) %}
+                    <label class="opcao">
+                        <input
+                            type="radio"
+                            name="pergunta_{{ id }}"
+                            value="{{ i }}"
+                            required
+                        >
+                        {{ opcoes[i] }}
+                    </label>
+                {% endfor %}
+            </div>
+
+        </div>
+        {% endfor %}
+
+    </div>
+
+    <button type="submit" class="btn-enviar">Enviar</button>
+</form>
+
+</body>
+</html>

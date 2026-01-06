@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Início da Avaliação{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <h2>Avaliação Psicossocial</h2>
+        <p class="subtitle">
+            Inicie o questionário informando o nome da empresa avaliada.
+        </p>
+
+        <form method="POST">
+            <label for="empresa">Nome da empresa</label>
+            <input type="text" id="empresa" name="empresa" required>
+
+            <button type="submit">Iniciar questionário</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

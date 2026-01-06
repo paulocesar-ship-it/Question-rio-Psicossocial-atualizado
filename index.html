@@ -1,0 +1,25 @@
+<form method="POST">
+    <div class="cards-container">
+
+        {% for p in perguntas %}
+        <div class="pergunta-card">
+            <p><strong>{{ loop.index }})</strong> {{ p.texto }}</p>
+
+            <div class="opcoes">
+                {% for opcao in p.escala %}
+                <label class="opcao">
+                    <input type="radio"
+                           name="pergunta_{{ p.id }}"
+                           value="{{ opcao.valor }}"
+                           required>
+                    {{ opcao.label }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+
+    </div>
+
+    <button type="submit">Enviar</button>
+</form>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Resultado Técnico</title>
+</head>
+<body>
+
+<h2>Resultado Técnico – Avaliação Psicossocial</h2>
+
+<p><strong>Empresa:</strong> {{ empresa }}</p>
+<p><strong>Total de participantes:</strong> {{ total }}</p>
+
+<hr>
+
+{% for dimensao, dados in resultados.items() %}
+    <div style="margin-bottom: 20px;">
+        <h3>{{ dimensao }}</h3>
+        <p>Média: {{ dados.media }}</p>
+        <p>Classificação: {{ dados.classificacao }}</p>
+    </div>
+{% endfor %}
+
+</body>
+</html>
