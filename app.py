@@ -88,6 +88,17 @@ def criar_tabelas():
         )
     """)
 
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS evento_origem (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    participante_id INTEGER NOT NULL,
+    pergunta_id INTEGER NOT NULL,
+    origem TEXT NOT NULL,
+    FOREIGN KEY(participante_id) REFERENCES participante(id),
+    FOREIGN KEY(pergunta_id) REFERENCES pergunta(id)
+    )
+    """)
+
     conn.commit()
     conn.close()
 # ==================================================
@@ -184,16 +195,16 @@ def migrar_perguntas():
         ("Com que frequência você se sente irritado?", "frequencia", 4, True),
 
         # 20 – Assédio sexual
-        ("Você foi exposto a atenção sexual indesejada no seu local de trabalho durante os últimos 12 meses?", "exposicao", 4, True),
+        ("Você foi exposto a atenção sexual indesejada no seu local de trabalho durante os últimos 12 meses?", "evento", 4, False),
 
         # 21 – Ameaça de violência
-        ("Você foi exposto a ameaças de violência no seu local de trabalho nos últimos 12 meses?", "exposicao", 4, True),
+        ("Você foi exposto a ameaças de violência no seu local de trabalho nos últimos 12 meses?", "evento", 4, False),
 
         # 22 – Violência física
-        ("Você foi exposto a violência física em seu local de trabalho durante os últimos 12 meses?", "exposicao", 4, True),
+        ("Você foi exposto a violência física em seu local de trabalho durante os últimos 12 meses?", "evento", 4, False),
 
         # 23 – Bullying
-        ("Você foi exposto a bullying no seu local de trabalho nos últimos 12 meses?", "exposicao", 4, True),
+        ("Você foi exposto a bullying no seu local de trabalho nos últimos 12 meses?", "evento", 4, False),
     ]
 
     for texto, escala, valor_maximo, invertida in perguntas:
@@ -250,13 +261,14 @@ ESCALAS = {
         "Muito pouco"
     ],
 
-    "exposicao": [
-        "Sim, várias vezes",
-        "Sim, algumas vezes",
-        "Sim, uma vez",
-        "Não"
-    ]
-}
+    # 👇 ESSENCIAL
+    "evento": [
+    "Não",
+    "Sim, diariamente",
+    "Sim, semanalmente",
+    "Sim, mensalmente",
+    "Sim, poucas vezes"
+]}
 # ==================================================
 # FUNÇÕES AUXILIARES
 # ==================================================
@@ -318,6 +330,10 @@ def empresa():
         return redirect(url_for("questionario"))
     return render_template("empresa.html")
 
+@app.route("/novo")
+def novo():
+    return redirect(url_for("questionario"))
+
 @app.route("/questionario", methods=["GET", "POST"])
 def questionario():
     # ==========================
@@ -334,14 +350,34 @@ def questionario():
         )
         participante_id = c.lastrowid
 
-        # Salva respostas (valores crus)
+        # ===============================
+        # Salva respostas e eventos
+        # ===============================
         for campo, valor in request.form.items():
+
             if campo.startswith("pergunta_"):
                 pergunta_id = int(campo.replace("pergunta_", ""))
+                resposta_valor = int(valor)
+
+                # Salva resposta principal
                 c.execute(
                     "INSERT INTO resposta (participante_id, pergunta_id, valor) VALUES (?, ?, ?)",
-                    (participante_id, pergunta_id, int(valor))
+                    (participante_id, pergunta_id, resposta_valor)
                 )
+
+                # Se houve evento, salva origens
+                if resposta_valor > 0:
+                    origens = request.form.getlist(f"origem_{pergunta_id}")
+
+                    for origem in origens:
+                        c.execute(
+                            """
+                            INSERT INTO evento_origem
+                            (participante_id, pergunta_id, origem)
+                            VALUES (?, ?, ?)
+                            """,
+                            (participante_id, pergunta_id, origem)
+                        )
 
         conn.commit()
         conn.close()
@@ -403,20 +439,20 @@ def continuar():
         total=total
     )
 
-
 @app.route("/finalizar")
 def finalizar():
     conn = conectar_db()
     c = conn.cursor()
 
     c.execute("""
-        SELECT d.nome, r.valor, pa.id, p.invertida, p.valor_maximo
-        FROM resposta r
-        JOIN pergunta p ON r.pergunta_id = p.id
-        JOIN dimensao d ON p.dimensao_id = d.id
-        JOIN participante pa ON r.participante_id = pa.id
-        WHERE pa.empresa_id = ?
-    """, (empresa_id_atual,))
+    SELECT d.nome, r.valor, pa.id, p.invertida, p.valor_maximo
+    FROM resposta r
+    JOIN pergunta p ON r.pergunta_id = p.id
+    JOIN dimensao d ON p.dimensao_id = d.id
+    JOIN participante pa ON r.participante_id = pa.id
+    WHERE pa.empresa_id = ?
+      AND p.escala != 'evento'
+""", (empresa_id_atual,))
     dados = c.fetchall()
 
     c.execute("SELECT nome FROM empresa WHERE id = ?", (empresa_id_atual,))
@@ -453,7 +489,6 @@ def finalizar():
     conn.close()
 
     return render_template("encerramento.html")
-
 # ==================================================
 # INIT
 # ==================================================

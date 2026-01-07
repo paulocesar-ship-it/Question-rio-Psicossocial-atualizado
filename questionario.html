@@ -8,6 +8,7 @@
 <body>
 
 <form method="POST">
+
     <div class="cards-container">
 
         {% for id, texto, escala_key, invertida in perguntas %}
@@ -17,21 +18,74 @@
                 <strong>{{ loop.index }})</strong> {{ texto }}
             </p>
 
+            {# ===============================
+               PERGUNTAS NORMAIS
+               =============================== #}
+            {% if escala_key != "evento" %}
             <div class="opcoes">
-                {% set opcoes = ESCALAS[escala_key] %}
-
-                {% for i in range(opcoes|length) %}
-                    <label class="opcao">
-                        <input
-                            type="radio"
-                            name="pergunta_{{ id }}"
-                            value="{{ i }}"
-                            required
-                        >
-                        {{ opcoes[i] }}
-                    </label>
+                {% set opcoes = ESCALAS.get(escala_key, []) %}
+                {% for opcao in opcoes %}
+                <label class="opcao">
+                    <input
+                        type="radio"
+                        name="pergunta_{{ id }}"
+                        value="{{ loop.index0 }}"
+                        required
+                    >
+                    {{ opcao }}
+                </label>
                 {% endfor %}
             </div>
+            {% endif %}
+
+            {# ===============================
+               PERGUNTAS DE EVENTO (20–23)
+               =============================== #}
+            {% if escala_key == "evento" %}
+            <div class="opcoes">
+                {% for opcao in ESCALAS["evento"] %}
+                <label class="opcao">
+                    <input
+                        type="radio"
+                        name="pergunta_{{ id }}"
+                        value="{{ loop.index0 }}"
+                        data-pergunta="{{ id }}"
+                        onchange="verificarEvento(this)"
+                        required
+                    >
+                    {{ opcao }}
+                </label>
+                {% endfor %}
+            </div>
+
+            <div
+                id="evento_{{ id }}"
+                class="evento-condicional"
+                style="display:none; margin-left:20px;"
+            >
+                <p style="margin-top:10px;"><strong>De quem?</strong></p>
+
+                <label>
+                    <input type="checkbox" name="origem_{{ id }}" value="colega">
+                    Colega
+                </label><br>
+
+                <label>
+                    <input type="checkbox" name="origem_{{ id }}" value="gestor">
+                    Gestor
+                </label><br>
+
+                <label>
+                    <input type="checkbox" name="origem_{{ id }}" value="subordinado">
+                    Subordinado
+                </label><br>
+
+                <label>
+                    <input type="checkbox" name="origem_{{ id }}" value="cliente">
+                    Cliente
+                </label>
+            </div>
+            {% endif %}
 
         </div>
         {% endfor %}
@@ -39,7 +93,24 @@
     </div>
 
     <button type="submit" class="btn-enviar">Enviar</button>
+
 </form>
+
+<script>
+function verificarEvento(el) {
+    const perguntaId = el.dataset.pergunta;
+    const bloco = document.getElementById("evento_" + perguntaId);
+
+    if (!bloco) return;
+
+    if (parseInt(el.value) > 0) {
+        bloco.style.display = "block";
+    } else {
+        bloco.style.display = "none";
+        bloco.querySelectorAll("input[type=checkbox]").forEach(cb => cb.checked = false);
+    }
+}
+</script>
 
 </body>
 </html>

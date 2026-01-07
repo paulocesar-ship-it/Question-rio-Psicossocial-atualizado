@@ -26,11 +26,9 @@
         </div>
 
         <div class="acoes">
-            <form action="/novo" method="get">
-                <button type="submit" class="btn-secundario">
-                    Adicionar novo participante
-                </button>
-            </form>
+            <form action="{{ url_for('questionario') }}" method="get">
+    <button type="submit">Adicionar novo participante</button>
+</form>
 
             <form action="/finalizar" method="get">
                 <button type="submit" class="btn-primario">
