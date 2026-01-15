@@ -6,24 +6,16 @@ from datetime import datetime
 import sqlite3
 import os
 import re
-# ==================================================
-# APP
-# ==================================================
+
 app = Flask(__name__)
-# ==================================================
-# CAMINHOS
-# ==================================================
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_NAME = os.path.join(BASE_DIR, "avaliacoes.db")
 PASTA_RELATORIOS = os.path.join(BASE_DIR, "relatorios")
 os.makedirs(PASTA_RELATORIOS, exist_ok=True)
-# ==================================================
-# CONTROLE SIMPLES DE SESSÃO
-# ==================================================
+
 empresa_id_atual = None
-# ==================================================
-# BANCO DE DADOS
-# ==================================================
+
 def conectar_db():
     return sqlite3.connect(DB_NAME)
 
@@ -120,90 +112,64 @@ def migrar_perguntas():
     dimensao_id = c.fetchone()[0]
 
     perguntas = [
-        # 1 – Demandas quantitativas
+        # Dimensão I – Demandas de Trabalho
         ("Você atrasa a entrega do seu trabalho?", "frequencia", 4, True),
         ("O tempo para realizar as suas tarefas no trabalho é suficiente?", "frequencia", 4, True),
-
-        # 2 – Ritmo de trabalho
         ("É necessário manter um ritmo acelerado no trabalho?", "frequencia", 4, True),
         ("Você trabalha em ritmo acelerado ao longo de toda jornada?", "frequencia", 4, True),
-
-        # 3 – Demandas emocionais
         ("Seu trabalho coloca você em situações emocionalmente desgastantes?", "frequencia", 4, True),
         ("Você tem que lidar com os problemas pessoais de outras pessoas como parte do seu trabalho?", "frequencia", 4, True),
 
-        # 4 – Influência no trabalho
+        # Dimensão II – Influência e possibilidade de desenvolvimento
         ("Você tem um alto grau de influência nas decisões sobre o seu trabalho?", "frequencia", 4, False),
         ("Você pode interferir na quantidade de trabalho atribuída a você?", "frequencia", 4, False),
-
-        # 5 – Possibilidades de desenvolvimento
         ("Você tem a possibilidade de aprender coisas novas através do seu trabalho?", "grau", 4, False),
         ("Seu trabalho exige que você tome iniciativas?", "grau", 4, False),
 
-        # 6 – Significado do trabalho
+        # Dimensão III – Significado do trabalho e comprometimento
         ("Seu trabalho é significativo?", "grau", 4, False),
         ("Você sente que o trabalho que faz é importante?", "grau", 4, False),
-
-        # 7 – Comprometimento com o local de trabalho
         ("Você sente que o seu local de trabalho é muito importante para você?", "grau", 4, False),
         ("Você recomendaria a um amigo que se candidatasse a uma vaga no seu local de trabalho?", "grau", 4, False),
 
-        # 8 – Previsibilidade
+        # Dimensão IV – Relações Interpessoais
         ("Você é informado antecipadamente sobre decisões importantes ou mudanças?", "grau", 4, False),
         ("Você recebe toda a informação necessária para fazer bem o seu trabalho?", "grau", 4, False),
-
-        # 9 – Reconhecimento
         ("O seu trabalho é reconhecido e valorizado pelos seus superiores?", "grau", 4, False),
         ("Você é tratado de forma justa no seu local de trabalho?", "grau", 4, False),
-
-        # 10 – Clareza de papel
         ("O seu trabalho tem objetivos claros?", "grau", 4, False),
         ("Você sabe exatamente o que se espera de você no trabalho?", "grau", 4, False),
 
-        # 11 – Qualidade da liderança
+        # Dimensão V - Liderança
         ("Seu superior imediato dá alta prioridade à satisfação com o trabalho?", "grau", 4, False),
         ("Seu superior imediato é bom no planejamento do trabalho?", "grau", 4, False),
-
-        # 12 – Apoio do superior
         ("Com que frequência seu superior imediato ouve seus problemas?", "frequencia", 4, False),
         ("Com que frequência você recebe ajuda do seu superior imediato?", "frequencia", 4, False),
-
-        # 13 – Satisfação geral
         ("Qual o seu nível de satisfação com o trabalho como um todo?", "satisfacao", 3, False),
 
-        # 14 – Conflito trabalho–vida privada
+        # Dimensão VI - Conflitos família e trabalho
         ("Seu trabalho afeta negativamente sua vida particular por consumir muita energia?", "concordancia", 3, True),
         ("Seu trabalho afeta negativamente sua vida particular por ocupar muito tempo?", "concordancia", 3, True),
 
-        # 15 – Confiança vertical
+        # Dimensão VII - Valores no local de trabalho
         ("Você pode confiar nas informações que vêm dos seus superiores?", "grau", 4, False),
         ("Os superiores confiam que os funcionários farão bem o trabalho?", "grau", 4, False),
-
-        # 16 – Justiça organizacional
         ("Os conflitos são resolvidos de forma justa?", "grau", 4, False),
         ("O trabalho é distribuído de forma justa?", "grau", 4, False),
 
-        # 17 – Saúde geral
+        # Dimensão VIII – Saúde geral
         ("Em geral, como você avalia sua saúde?", "avaliacao_saude", 4, False),
 
-        # 18 – Exaustão
+        # Dimensão IX – Burnout e Estresse
         ("Com que frequência você se sente fisicamente esgotado?", "frequencia", 4, True),
         ("Com que frequência você se sente emocionalmente esgotado?", "frequencia", 4, True),
-
-        # 19 – Estresse
         ("Com que frequência você se sente estressado?", "frequencia", 4, True),
         ("Com que frequência você se sente irritado?", "frequencia", 4, True),
 
-        # 20 – Assédio sexual
+        # Dimensão X - Comportamentos ofensivos
         ("Você foi exposto a atenção sexual indesejada no seu local de trabalho durante os últimos 12 meses?", "evento", 4, False),
-
-        # 21 – Ameaça de violência
         ("Você foi exposto a ameaças de violência no seu local de trabalho nos últimos 12 meses?", "evento", 4, False),
-
-        # 22 – Violência física
         ("Você foi exposto a violência física em seu local de trabalho durante os últimos 12 meses?", "evento", 4, False),
-
-        # 23 – Bullying
         ("Você foi exposto a bullying no seu local de trabalho nos últimos 12 meses?", "evento", 4, False),
     ]
 
@@ -261,17 +227,17 @@ ESCALAS = {
         "Muito pouco"
     ],
 
-    # 👇 ESSENCIAL
     "evento": [
     "Não",
     "Sim, diariamente",
     "Sim, semanalmente",
     "Sim, mensalmente",
     "Sim, poucas vezes"
-]}
-# ==================================================
+]
+}
+
 # FUNÇÕES AUXILIARES
-# ==================================================
+
 def nome_seguro(texto):
     return re.sub(r"[^\w\-]", "_", texto.lower())
 
