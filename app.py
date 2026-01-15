@@ -24,6 +24,12 @@ def criar_tabelas():
     c = conn.cursor()
 
     c.execute("""
+    CREATE TABLE IF NOT EXISTS controle (
+        chave TEXT PRIMARY KEY
+    )
+""")
+    
+    c.execute("""
         CREATE TABLE IF NOT EXISTS empresa (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT NOT NULL,
@@ -100,91 +106,93 @@ def migrar_perguntas():
     conn = conectar_db()
     c = conn.cursor()
 
-    # Dimensão única (como você pediu, mesma abordagem atual)
-    c.execute(
-        "INSERT OR IGNORE INTO dimensao (nome) VALUES (?)",
-        ("Demandas de Trabalho",)
-    )
-    c.execute(
-        "SELECT id FROM dimensao WHERE nome = ?",
-        ("Demandas de Trabalho",)
-    )
-    dimensao_id = c.fetchone()[0]
+    # 🔒 Verifica se já foi migrado
+    c.execute("SELECT 1 FROM controle WHERE chave = 'perguntas_migradas'")
+    if c.fetchone():
+        conn.close()
+        return  # Já migrado, cai fora
 
-    perguntas = [
-        # Dimensão I – Demandas de Trabalho
-        ("Você atrasa a entrega do seu trabalho?", "frequencia", 4, True),
-        ("O tempo para realizar as suas tarefas no trabalho é suficiente?", "frequencia", 4, True),
-        ("É necessário manter um ritmo acelerado no trabalho?", "frequencia", 4, True),
-        ("Você trabalha em ritmo acelerado ao longo de toda jornada?", "frequencia", 4, True),
-        ("Seu trabalho coloca você em situações emocionalmente desgastantes?", "frequencia", 4, True),
-        ("Você tem que lidar com os problemas pessoais de outras pessoas como parte do seu trabalho?", "frequencia", 4, True),
+    DIMENSOES = {
+        "Demandas de Trabalho": [
+            ("Você atrasa a entrega do seu trabalho?", "frequencia", 4, True),
+            ("O tempo para realizar as suas tarefas no trabalho é suficiente?", "frequencia", 4, True),
+            ("É necessário manter um ritmo acelerado no trabalho?", "frequencia", 4, True),
+            ("Você trabalha em ritmo acelerado ao longo de toda jornada?", "frequencia", 4, True),
+            ("Seu trabalho coloca você em situações emocionalmente desgastantes?", "frequencia", 4, True),
+            ("Você tem que lidar com os problemas pessoais de outras pessoas como parte do seu trabalho?", "frequencia", 4, True),
+        ],
+        "Influência e possibilidade de desenvolvimento": [
+            ("Você tem um alto grau de influência nas decisões sobre o seu trabalho?", "frequencia", 4, False),
+            ("Você pode interferir na quantidade de trabalho atribuída a você?", "frequencia", 4, False),
+            ("Você tem a possibilidade de aprender coisas novas através do seu trabalho?", "grau", 4, False),
+            ("Seu trabalho exige que você tome iniciativas?", "grau", 4, False),
+        ],
+        "Significado do trabalho e comprometimento": [
+            ("Seu trabalho é significativo?", "grau", 4, False),
+            ("Você sente que o trabalho que faz é importante?", "grau", 4, False),
+            ("Você sente que o seu local de trabalho é muito importante para você?", "grau", 4, False),
+            ("Você recomendaria a um amigo que se candidatasse a uma vaga no seu local de trabalho?", "grau", 4, False),
+        ],
+        "Relações Interpessoais": [
+            ("Você é informado antecipadamente sobre decisões importantes ou mudanças?", "grau", 4, False),
+            ("Você recebe toda a informação necessária para fazer bem o seu trabalho?", "grau", 4, False),
+            ("O seu trabalho é reconhecido e valorizado pelos seus superiores?", "grau", 4, False),
+            ("Você é tratado de forma justa no seu local de trabalho?", "grau", 4, False),
+            ("O seu trabalho tem objetivos claros?", "grau", 4, False),
+            ("Você sabe exatamente o que se espera de você no trabalho?", "grau", 4, False),
+        ],
+        "Liderança": [
+            ("Seu superior imediato dá alta prioridade à satisfação com o trabalho?", "grau", 4, False),
+            ("Seu superior imediato é bom no planejamento do trabalho?", "grau", 4, False),
+            ("Com que frequência seu superior imediato ouve seus problemas?", "frequencia", 4, False),
+            ("Com que frequência você recebe ajuda do seu superior imediato?", "frequencia", 4, False),
+            ("Qual o seu nível de satisfação com o trabalho como um todo?", "satisfacao", 3, False),
+        ],
+        "Conflitos família e trabalho": [
+            ("Seu trabalho afeta negativamente sua vida particular por consumir muita energia?", "concordancia", 3, True),
+            ("Seu trabalho afeta negativamente sua vida particular por ocupar muito tempo?", "concordancia", 3, True),
+        ],
+        "Valores no local de trabalho": [
+            ("Você pode confiar nas informações que vêm dos seus superiores?", "grau", 4, False),
+            ("Os superiores confiam que os funcionários farão bem o trabalho?", "grau", 4, False),
+            ("Os conflitos são resolvidos de forma justa?", "grau", 4, False),
+            ("O trabalho é distribuído de forma justa?", "grau", 4, False),
+        ],
+        "Saúde geral": [
+            ("Em geral, como você avalia sua saúde?", "avaliacao_saude", 4, False),
+        ],
+        "Burnout e Estresse": [
+            ("Com que frequência você se sente fisicamente esgotado?", "frequencia", 4, True),
+            ("Com que frequência você se sente emocionalmente esgotado?", "frequencia", 4, True),
+            ("Com que frequência você se sente estressado?", "frequencia", 4, True),
+            ("Com que frequência você se sente irritado?", "frequencia", 4, True),
+        ],
+        "Comportamentos ofensivos": [
+            ("Você foi exposto a atenção sexual indesejada no seu local de trabalho durante os últimos 12 meses?", "evento", 4, False),
+            ("Você foi exposto a ameaças de violência no seu local de trabalho nos últimos 12 meses?", "evento", 4, False),
+            ("Você foi exposto a violência física em seu local de trabalho durante os últimos 12 meses?", "evento", 4, False),
+            ("Você foi exposto a bullying no seu local de trabalho durante os últimos 12 meses?", "evento", 4, False),
+        ],
+    }
 
-        # Dimensão II – Influência e possibilidade de desenvolvimento
-        ("Você tem um alto grau de influência nas decisões sobre o seu trabalho?", "frequencia", 4, False),
-        ("Você pode interferir na quantidade de trabalho atribuída a você?", "frequencia", 4, False),
-        ("Você tem a possibilidade de aprender coisas novas através do seu trabalho?", "grau", 4, False),
-        ("Seu trabalho exige que você tome iniciativas?", "grau", 4, False),
+    for nome_dimensao, perguntas in DIMENSOES.items():
+        c.execute("INSERT INTO dimensao (nome) VALUES (?)", (nome_dimensao,))
+        c.execute("SELECT id FROM dimensao WHERE nome = ?", (nome_dimensao,))
+        dimensao_id = c.fetchone()[0]
 
-        # Dimensão III – Significado do trabalho e comprometimento
-        ("Seu trabalho é significativo?", "grau", 4, False),
-        ("Você sente que o trabalho que faz é importante?", "grau", 4, False),
-        ("Você sente que o seu local de trabalho é muito importante para você?", "grau", 4, False),
-        ("Você recomendaria a um amigo que se candidatasse a uma vaga no seu local de trabalho?", "grau", 4, False),
+        for texto, escala, valor_maximo, invertida in perguntas:
+            c.execute("""
+                INSERT INTO pergunta
+                (dimensao_id, texto, escala, invertida, valor_maximo)
+                VALUES (?, ?, ?, ?, ?)
+            """, (dimensao_id, texto, escala, int(invertida), valor_maximo))
 
-        # Dimensão IV – Relações Interpessoais
-        ("Você é informado antecipadamente sobre decisões importantes ou mudanças?", "grau", 4, False),
-        ("Você recebe toda a informação necessária para fazer bem o seu trabalho?", "grau", 4, False),
-        ("O seu trabalho é reconhecido e valorizado pelos seus superiores?", "grau", 4, False),
-        ("Você é tratado de forma justa no seu local de trabalho?", "grau", 4, False),
-        ("O seu trabalho tem objetivos claros?", "grau", 4, False),
-        ("Você sabe exatamente o que se espera de você no trabalho?", "grau", 4, False),
-
-        # Dimensão V - Liderança
-        ("Seu superior imediato dá alta prioridade à satisfação com o trabalho?", "grau", 4, False),
-        ("Seu superior imediato é bom no planejamento do trabalho?", "grau", 4, False),
-        ("Com que frequência seu superior imediato ouve seus problemas?", "frequencia", 4, False),
-        ("Com que frequência você recebe ajuda do seu superior imediato?", "frequencia", 4, False),
-        ("Qual o seu nível de satisfação com o trabalho como um todo?", "satisfacao", 3, False),
-
-        # Dimensão VI - Conflitos família e trabalho
-        ("Seu trabalho afeta negativamente sua vida particular por consumir muita energia?", "concordancia", 3, True),
-        ("Seu trabalho afeta negativamente sua vida particular por ocupar muito tempo?", "concordancia", 3, True),
-
-        # Dimensão VII - Valores no local de trabalho
-        ("Você pode confiar nas informações que vêm dos seus superiores?", "grau", 4, False),
-        ("Os superiores confiam que os funcionários farão bem o trabalho?", "grau", 4, False),
-        ("Os conflitos são resolvidos de forma justa?", "grau", 4, False),
-        ("O trabalho é distribuído de forma justa?", "grau", 4, False),
-
-        # Dimensão VIII – Saúde geral
-        ("Em geral, como você avalia sua saúde?", "avaliacao_saude", 4, False),
-
-        # Dimensão IX – Burnout e Estresse
-        ("Com que frequência você se sente fisicamente esgotado?", "frequencia", 4, True),
-        ("Com que frequência você se sente emocionalmente esgotado?", "frequencia", 4, True),
-        ("Com que frequência você se sente estressado?", "frequencia", 4, True),
-        ("Com que frequência você se sente irritado?", "frequencia", 4, True),
-
-        # Dimensão X - Comportamentos ofensivos
-        ("Você foi exposto a atenção sexual indesejada no seu local de trabalho durante os últimos 12 meses?", "evento", 4, False),
-        ("Você foi exposto a ameaças de violência no seu local de trabalho nos últimos 12 meses?", "evento", 4, False),
-        ("Você foi exposto a violência física em seu local de trabalho durante os últimos 12 meses?", "evento", 4, False),
-        ("Você foi exposto a bullying no seu local de trabalho nos últimos 12 meses?", "evento", 4, False),
-    ]
-
-    for texto, escala, valor_maximo, invertida in perguntas:
-        c.execute(
-            """
-            INSERT OR IGNORE INTO pergunta
-            (dimensao_id, texto, escala, invertida, valor_maximo)
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (dimensao_id, texto, escala, int(invertida), valor_maximo)
-        )
+    # 🔐 Marca migração como concluída
+    c.execute("INSERT INTO controle (chave) VALUES ('perguntas_migradas')")
 
     conn.commit()
     conn.close()
+
 # ==================================================
 # ESCALAS
 # ==================================================
@@ -270,11 +278,11 @@ def gerar_pdf(empresa, total, resultados):
     elementos.append(Paragraph(f"Participantes: {total}", estilos["Normal"]))
     elementos.append(Spacer(1, 20))
 
-    for dim, media in resultados.items():
-        elementos.append(Paragraph(dim, estilos["Heading2"]))
-        elementos.append(Paragraph(f"Média: {media}", estilos["Normal"]))
-        elementos.append(Paragraph(classificar_risco(media), estilos["Normal"]))
-        elementos.append(Spacer(1, 15))
+    for dim, media in sorted(resultados.items()):
+     elementos.append(Paragraph(f"<b>Dimensão:</b> {dim}", estilos["Heading2"]))
+    elementos.append(Paragraph(f"<b>Média da dimensão:</b> {media}", estilos["Normal"]))
+    elementos.append(Paragraph(classificar_risco(media), estilos["Normal"]))
+    elementos.append(Spacer(1, 15))
 
     SimpleDocTemplate(caminho, pagesize=A4).build(elementos)
     return caminho
@@ -409,42 +417,59 @@ def continuar():
 def finalizar():
     conn = conectar_db()
     c = conn.cursor()
-
+    # =============================
+    # 1️⃣ Buscar todas as respostas, incluindo a dimensão e se é invertida
+    # =============================
     c.execute("""
-    SELECT d.nome, r.valor, pa.id, p.invertida, p.valor_maximo
-    FROM resposta r
-    JOIN pergunta p ON r.pergunta_id = p.id
-    JOIN dimensao d ON p.dimensao_id = d.id
-    JOIN participante pa ON r.participante_id = pa.id
-    WHERE pa.empresa_id = ?
-      AND p.escala != 'evento'
-""", (empresa_id_atual,))
-    dados = c.fetchall()
+        SELECT d.nome AS dimensao, r.valor, p.invertida, p.valor_maximo
+        FROM resposta r
+        JOIN pergunta p ON r.pergunta_id = p.id
+        JOIN dimensao d ON p.dimensao_id = d.id
+        JOIN participante pa ON r.participante_id = pa.id
+        WHERE pa.empresa_id = ?
+          AND p.escala != 'evento'
+        ORDER BY d.id
+    """, (empresa_id_atual,))
+    
+    dados = c.fetchall()  # lista de tuplas: (dimensao, valor, invertida, valor_maximo)
 
+    # =============================
+    # 2️⃣ Buscar o nome da empresa
+    # =============================
     c.execute("SELECT nome FROM empresa WHERE id = ?", (empresa_id_atual,))
     empresa_nome = c.fetchone()[0]
     conn.close()
 
-    respostas_por_dimensao = {}
+    # =============================
+    # 3️⃣ Agrupar respostas por dimensão
+    # =============================
+    respostas_por_dimensao = {}  # chave: dimensão, valor: lista de respostas
 
-    for dim, valor, participante, invertida, valor_maximo in dados:
-        respostas_por_dimensao.setdefault(dim, {})
-        respostas_por_dimensao[dim].setdefault(participante, [])
-
+    for dim, valor, invertida, valor_maximo in dados:
         if invertida:
-            valor = valor_maximo - valor
+            valor = valor_maximo - valor  # corrige perguntas invertidas
+        respostas_por_dimensao.setdefault(dim, []).append(valor)
 
-        respostas_por_dimensao[dim][participante].append(valor)
+    # =============================
+    # 4️⃣ Calcular média única por dimensão
+    # =============================
+    medias_dimensao = {}
+    for dim, valores in respostas_por_dimensao.items():
+        medias_dimensao[dim] = round(sum(valores) / len(valores), 2)
 
-    respostas_formatadas = {
-        dim: list(p.values())
-        for dim, p in respostas_por_dimensao.items()
-    }
+    # =============================
+    # 5️⃣ Total de participantes (para referência no PDF)
+    # =============================
+    total_participantes = len(set([r[0] for r in dados]))  # não usado para cálculo, só para PDF
 
-    medias = calcular_medias_copsoq(respostas_formatadas)
-    total = len(set(p for _, _, p, _, _ in dados))
-    caminho_pdf = gerar_pdf(empresa_nome, total, medias)
+    # =============================
+    # 6️⃣ Gerar PDF
+    # =============================
+    caminho_pdf = gerar_pdf(empresa_nome, total_participantes, medias_dimensao)
 
+    # =============================
+    # 7️⃣ Salvar relatório no banco
+    # =============================
     conn = conectar_db()
     c = conn.cursor()
     c.execute(
@@ -454,7 +479,11 @@ def finalizar():
     conn.commit()
     conn.close()
 
+    # =============================
+    # 8️⃣ Renderizar página de encerramento
+    # =============================
     return render_template("encerramento.html")
+
 # ==================================================
 # INIT
 # ==================================================
