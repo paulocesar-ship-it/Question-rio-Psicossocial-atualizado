@@ -11,7 +11,7 @@
 
     <div class="cards-container">
 
-        {% for id, texto, escala_key, invertida in perguntas %}
+        {% for id, texto, escala_key in perguntas %}
         <div class="pergunta-card">
 
             <p class="pergunta-texto">
@@ -19,41 +19,41 @@
             </p>
 
             {# ===============================
-               PERGUNTAS NORMAIS
+               PERGUNTAS COPSOQ NORMAIS
                =============================== #}
             {% if escala_key != "evento" %}
             <div class="opcoes">
                 {% set opcoes = ESCALAS.get(escala_key, []) %}
-                {% for opcao in opcoes %}
+                {% for texto_opcao, valor in opcoes %}
                 <label class="opcao">
                     <input
                         type="radio"
                         name="pergunta_{{ id }}"
-                        value="{{ loop.index0 }}"
+                        value="{{ valor }}"
                         required
                     >
-                    {{ opcao }}
+                    {{ texto_opcao }}
                 </label>
                 {% endfor %}
             </div>
             {% endif %}
 
             {# ===============================
-               PERGUNTAS DE EVENTO (20–23)
+               PERGUNTAS DE EVENTO CRÍTICO
                =============================== #}
             {% if escala_key == "evento" %}
             <div class="opcoes">
-                {% for opcao in ESCALAS["evento"] %}
+                {% for texto_opcao, valor in ESCALAS["evento"] %}
                 <label class="opcao">
                     <input
                         type="radio"
                         name="pergunta_{{ id }}"
-                        value="{{ loop.index0 }}"
+                        value="{{ valor }}"
                         data-pergunta="{{ id }}"
                         onchange="verificarEvento(this)"
                         required
                     >
-                    {{ opcao }}
+                    {{ texto_opcao }}
                 </label>
                 {% endfor %}
             </div>
