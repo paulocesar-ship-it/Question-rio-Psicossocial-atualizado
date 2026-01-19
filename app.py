@@ -22,13 +22,17 @@ def conectar_db():
 def criar_tabelas():
     conn = conectar_db()
     c = conn.cursor()
-
+    # =========================
+    # CONTROLE DE MIGRAÇÕES
+    # =========================
     c.execute("""
-    CREATE TABLE IF NOT EXISTS controle (
-        chave TEXT PRIMARY KEY
-    )
-""")
-    
+        CREATE TABLE IF NOT EXISTS controle (
+            chave TEXT PRIMARY KEY
+        )
+    """)
+    # =========================
+    # EMPRESA
+    # =========================
     c.execute("""
         CREATE TABLE IF NOT EXISTS empresa (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,216 +40,311 @@ def criar_tabelas():
             data TEXT
         )
     """)
-
+    # =========================
+    # DIMENSÕES (COPSOQ)
+    # =========================
     c.execute("""
         CREATE TABLE IF NOT EXISTS dimensao (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT NOT NULL UNIQUE
         )
     """)
-
+    # =========================
+    # PARTICIPANTE
+    # =========================
     c.execute("""
         CREATE TABLE IF NOT EXISTS participante (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            empresa_id INTEGER,
+            empresa_id INTEGER NOT NULL,
             data TEXT,
-            FOREIGN KEY(empresa_id) REFERENCES empresa(id)
+            FOREIGN KEY (empresa_id) REFERENCES empresa(id)
         )
     """)
-
+    # =========================
+    # PERGUNTAS
+    # escala agora carrega o SENTIDO
+    # (frequencia_crescente, grau_decrescente, etc.)
+    # =========================
     c.execute("""
         CREATE TABLE IF NOT EXISTS pergunta (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             dimensao_id INTEGER NOT NULL,
             texto TEXT NOT NULL,
             escala TEXT NOT NULL,
-            invertida INTEGER DEFAULT 0,
-            valor_maximo INTEGER DEFAULT 4,
-            UNIQUE(dimensao_id, texto),
-            FOREIGN KEY(dimensao_id) REFERENCES dimensao(id)
+            UNIQUE (dimensao_id, texto),
+            FOREIGN KEY (dimensao_id) REFERENCES dimensao(id)
         )
     """)
-
+    # =========================
+    # RESPOSTAS
+    # valor JÁ NORMALIZADO (1–5 ou 1–4)
+    # =========================
     c.execute("""
         CREATE TABLE IF NOT EXISTS resposta (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            participante_id INTEGER,
-            pergunta_id INTEGER,
-            valor INTEGER,
-            FOREIGN KEY(participante_id) REFERENCES participante(id),
-            FOREIGN KEY(pergunta_id) REFERENCES pergunta(id)
+            participante_id INTEGER NOT NULL,
+            pergunta_id INTEGER NOT NULL,
+            valor INTEGER NOT NULL,
+            FOREIGN KEY (participante_id) REFERENCES participante(id),
+            FOREIGN KEY (pergunta_id) REFERENCES pergunta(id)
         )
     """)
 
+    # =========================
+    # RELATÓRIOS GERADOS
+    # =========================
     c.execute("""
         CREATE TABLE IF NOT EXISTS relatorio (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            empresa_id INTEGER,
-            caminho_pdf TEXT,
-            data TEXT
+            empresa_id INTEGER NOT NULL,
+            caminho_pdf TEXT NOT NULL,
+            data TEXT,
+            FOREIGN KEY (empresa_id) REFERENCES empresa(id)
         )
     """)
 
+    # =========================
+    # EVENTOS CRÍTICOS
+    # (sem pontuação COPSOQ)
+    # =========================
     c.execute("""
         CREATE TABLE IF NOT EXISTS evento_origem (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    participante_id INTEGER NOT NULL,
-    pergunta_id INTEGER NOT NULL,
-    origem TEXT NOT NULL,
-    FOREIGN KEY(participante_id) REFERENCES participante(id),
-    FOREIGN KEY(pergunta_id) REFERENCES pergunta(id)
-    )
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            participante_id INTEGER NOT NULL,
+            pergunta_id INTEGER NOT NULL,
+            origem TEXT NOT NULL,
+            FOREIGN KEY (participante_id) REFERENCES participante(id),
+            FOREIGN KEY (pergunta_id) REFERENCES pergunta(id)
+        )
     """)
 
     conn.commit()
     conn.close()
-# ==================================================
-# MIGRAÇÃO DE PERGUNTAS
-# ==================================================
+
 def migrar_perguntas():
     conn = conectar_db()
     c = conn.cursor()
 
-    # 🔒 Verifica se já foi migrado
+    # 🔒 Evita migração duplicada
     c.execute("SELECT 1 FROM controle WHERE chave = 'perguntas_migradas'")
     if c.fetchone():
         conn.close()
-        return  # Já migrado, cai fora
+        return
 
     DIMENSOES = {
+        # ==================================================
+        # 01 — DEMANDAS DE TRABALHO
+        # Quanto maior a frequência, MAIOR o risco
+        # ==================================================
         "Demandas de Trabalho": [
-            ("Você atrasa a entrega do seu trabalho?", "frequencia", 4, True),
-            ("O tempo para realizar as suas tarefas no trabalho é suficiente?", "frequencia", 4, True),
-            ("É necessário manter um ritmo acelerado no trabalho?", "frequencia", 4, True),
-            ("Você trabalha em ritmo acelerado ao longo de toda jornada?", "frequencia", 4, True),
-            ("Seu trabalho coloca você em situações emocionalmente desgastantes?", "frequencia", 4, True),
-            ("Você tem que lidar com os problemas pessoais de outras pessoas como parte do seu trabalho?", "frequencia", 4, True),
+            ("Você atrasa a entrega do seu trabalho?", "frequencia_crescente"),
+            ("O tempo para realizar as suas tarefas no trabalho é suficiente?", "frequencia_decrescente"),
+            ("É necessário manter um ritmo acelerado no trabalho?", "frequencia_crescente"),
+            ("Você trabalha em ritmo acelerado ao longo de toda jornada?", "frequencia_crescente"),
+            ("Seu trabalho coloca você em situações emocionalmente desgastantes?", "frequencia_crescente"),
+            ("Você tem que lidar com os problemas pessoais de outras pessoas como parte do seu trabalho?", "frequencia_crescente"),
         ],
+
+        # ==================================================
+        # 02 — INFLUÊNCIA E DESENVOLVIMENTO
+        # Quanto maior o grau, MENOR o risco
+        # ==================================================
         "Influência e possibilidade de desenvolvimento": [
-            ("Você tem um alto grau de influência nas decisões sobre o seu trabalho?", "frequencia", 4, False),
-            ("Você pode interferir na quantidade de trabalho atribuída a você?", "frequencia", 4, False),
-            ("Você tem a possibilidade de aprender coisas novas através do seu trabalho?", "grau", 4, False),
-            ("Seu trabalho exige que você tome iniciativas?", "grau", 4, False),
+            ("Você tem um alto grau de influência nas decisões sobre o seu trabalho?", "grau_decrescente"),
+            ("Você pode interferir na quantidade de trabalho atribuída a você?", "grau_decrescente"),
+            ("Você tem a possibilidade de aprender coisas novas através do seu trabalho?", "grau_decrescente"),
+            ("Seu trabalho exige que você tome iniciativas?", "grau_decrescente"),
         ],
+
+        # ==================================================
+        # 03 — SIGNIFICADO DO TRABALHO
+        # ==================================================
         "Significado do trabalho e comprometimento": [
-            ("Seu trabalho é significativo?", "grau", 4, False),
-            ("Você sente que o trabalho que faz é importante?", "grau", 4, False),
-            ("Você sente que o seu local de trabalho é muito importante para você?", "grau", 4, False),
-            ("Você recomendaria a um amigo que se candidatasse a uma vaga no seu local de trabalho?", "grau", 4, False),
+            ("Seu trabalho é significativo?", "grau_decrescente"),
+            ("Você sente que o trabalho que faz é importante?", "grau_decrescente"),
+            ("Você sente que o seu local de trabalho é muito importante para você?", "grau_decrescente"),
+            ("Você recomendaria a um amigo que se candidatasse a uma vaga no seu local de trabalho?", "grau_decrescente"),
         ],
+
+        # ==================================================
+        # 04 — RELAÇÕES INTERPESSOAIS
+        # ==================================================
         "Relações Interpessoais": [
-            ("Você é informado antecipadamente sobre decisões importantes ou mudanças?", "grau", 4, False),
-            ("Você recebe toda a informação necessária para fazer bem o seu trabalho?", "grau", 4, False),
-            ("O seu trabalho é reconhecido e valorizado pelos seus superiores?", "grau", 4, False),
-            ("Você é tratado de forma justa no seu local de trabalho?", "grau", 4, False),
-            ("O seu trabalho tem objetivos claros?", "grau", 4, False),
-            ("Você sabe exatamente o que se espera de você no trabalho?", "grau", 4, False),
+            ("No seu local de trabalho, você é informado antecipadamente sobre decisões importantes, mudanças ou planos para o futuro?", "grau_decrescente"),
+            ("Você recebe toda a informação necessária para fazer bem o seu trabalho?", "grau_decrescente"),
+            ("O seu trabalho é reconhecido e valorizado pelos seus superiores?", "grau_decrescente"),
+            ("Você é tratado de forma justa no seu local de trabalho?", "grau_decrescente"),
+            ("O seu trabalho tem objetivos/metas claros(as)?", "grau_decrescente"),
+            ("Você sabe exatamente o que se espera de você no trabalho?", "grau_decrescente"),
         ],
+
+        # ==================================================
+        # 05 — LIDERANÇA
+        # ==================================================
         "Liderança": [
-            ("Seu superior imediato dá alta prioridade à satisfação com o trabalho?", "grau", 4, False),
-            ("Seu superior imediato é bom no planejamento do trabalho?", "grau", 4, False),
-            ("Com que frequência seu superior imediato ouve seus problemas?", "frequencia", 4, False),
-            ("Com que frequência você recebe ajuda do seu superior imediato?", "frequencia", 4, False),
-            ("Qual o seu nível de satisfação com o trabalho como um todo?", "satisfacao", 3, False),
+            ("Você diria que seu superior imediato dá alta prioridade à satisfação com o trabalho?", "grau_decrescente"),
+            ("Você diria que seu superior imediato é bom no planejamento do trabalho?", "grau_decrescente"),
+            ("Com que frequência seu superior imediato está disposto a ouvir os seus problemas no trabalho?", "frequencia_decrescente"),
+            ("Com que frequência você recebe ajuda e suporte do seu superior imediato?", "frequencia_decrescente"),
         ],
+
+        # ==================================================
+        # 06 — SATISFAÇÃO GERAL
+        # ==================================================
+        "Interface trabalho-indivíduo": [
+            ("Qual o seu nível de satisfação com o seu trabalho como um todo, considerando todos os aspectos?", "satisfacao_decrescente"),
+        ],
+
+        # ==================================================
+        # 07 — CONFLITO TRABALHO–VIDA
+        # Quanto maior o impacto, MAIOR o risco
+        # ==================================================
         "Conflitos família e trabalho": [
-            ("Seu trabalho afeta negativamente sua vida particular por consumir muita energia?", "concordancia", 3, True),
-            ("Seu trabalho afeta negativamente sua vida particular por ocupar muito tempo?", "concordancia", 3, True),
+            ("Você sente que o seu trabalho consome tanto sua energia que ele tem um efeito negativo na sua vida particular?", "impacto_negativo_crescente"),
+            ("Você sente que o seu trabalho ocupa tanto tempo que ele tem um efeito negativo na sua vida particular?", "impacto_negativo_crescente"),
         ],
+
+        # ==================================================
+        # 08 — VALORES ORGANIZACIONAIS
+        # ==================================================
         "Valores no local de trabalho": [
-            ("Você pode confiar nas informações que vêm dos seus superiores?", "grau", 4, False),
-            ("Os superiores confiam que os funcionários farão bem o trabalho?", "grau", 4, False),
-            ("Os conflitos são resolvidos de forma justa?", "grau", 4, False),
-            ("O trabalho é distribuído de forma justa?", "grau", 4, False),
+            ("Você pode confiar nas informações que vêm dos seus superiores?", "grau_decrescente"),
+            ("Os seus superiores confiam que os funcionários farão bem seu trabalho?", "grau_decrescente"),
+            ("Os conflitos são resolvidos de forma justa?", "grau_decrescente"),
+            ("O trabalho é distribuído de forma justa?", "grau_decrescente"),
         ],
+
+        # ==================================================
+        # 09 — SAÚDE GERAL
+        # ==================================================
         "Saúde geral": [
-            ("Em geral, como você avalia sua saúde?", "avaliacao_saude", 4, False),
+            ("Em geral, você diria que a sua saúde é:", "saude_decrescente"),
         ],
+
+        # ==================================================
+        # 10 — BURNOUT E ESTRESSE
+        # ==================================================
         "Burnout e Estresse": [
-            ("Com que frequência você se sente fisicamente esgotado?", "frequencia", 4, True),
-            ("Com que frequência você se sente emocionalmente esgotado?", "frequencia", 4, True),
-            ("Com que frequência você se sente estressado?", "frequencia", 4, True),
-            ("Com que frequência você se sente irritado?", "frequencia", 4, True),
+            ("Com que frequência você se sente fisicamente esgotado?", "frequencia_crescente"),
+            ("Com que frequência você se sente emocionalmente esgotado?", "frequencia_crescente"),
+            ("Com que frequência você se sente estressado?", "frequencia_crescente"),
+            ("Com que frequência você se sente irritado?", "frequencia_crescente"),
         ],
+
+        # ==================================================
+        # 11 — COMPORTAMENTOS OFENSIVOS (EVENTOS)
+        # NÃO entram no cálculo COPSOQ
+        # ==================================================
         "Comportamentos ofensivos": [
-            ("Você foi exposto a atenção sexual indesejada no seu local de trabalho durante os últimos 12 meses?", "evento", 4, False),
-            ("Você foi exposto a ameaças de violência no seu local de trabalho nos últimos 12 meses?", "evento", 4, False),
-            ("Você foi exposto a violência física em seu local de trabalho durante os últimos 12 meses?", "evento", 4, False),
-            ("Você foi exposto a bullying no seu local de trabalho durante os últimos 12 meses?", "evento", 4, False),
+            ("Você foi exposto a atenção sexual indesejada no seu local de trabalho durante os últimos 12 meses?", "evento"),
+            ("Você foi exposto a ameaças de violência no seu local de trabalho nos últimos 12 meses?", "evento"),
+            ("Você foi exposto a violência física em seu local de trabalho durante os últimos 12 meses?", "evento"),
+            ("Você foi exposto a bullying no seu local de trabalho durante os últimos 12 meses?", "evento"),
         ],
     }
 
+    # =========================
+    # INSERÇÃO NO BANCO
+    # =========================
     for nome_dimensao, perguntas in DIMENSOES.items():
         c.execute("INSERT INTO dimensao (nome) VALUES (?)", (nome_dimensao,))
         c.execute("SELECT id FROM dimensao WHERE nome = ?", (nome_dimensao,))
         dimensao_id = c.fetchone()[0]
 
-        for texto, escala, valor_maximo, invertida in perguntas:
+        for texto, escala in perguntas:
             c.execute("""
-                INSERT INTO pergunta
-                (dimensao_id, texto, escala, invertida, valor_maximo)
-                VALUES (?, ?, ?, ?, ?)
-            """, (dimensao_id, texto, escala, int(invertida), valor_maximo))
+                INSERT INTO pergunta (dimensao_id, texto, escala)
+                VALUES (?, ?, ?)
+            """, (dimensao_id, texto, escala))
 
-    # 🔐 Marca migração como concluída
     c.execute("INSERT INTO controle (chave) VALUES ('perguntas_migradas')")
-
     conn.commit()
     conn.close()
 
-# ==================================================
-# ESCALAS
-# ==================================================
 ESCALAS = {
-    "frequencia": [
-        "Sempre",
-        "Frequentemente",
-        "Às vezes",
-        "Raramente",
-        "Nunca"
+    "frequencia_crescente": [
+        ("Nunca", 1),
+        ("Raramente", 2),
+        ("Às vezes", 3),
+        ("Frequentemente", 4),
+        ("Sempre", 5),
     ],
 
-    "satisfacao": [
-        "Muito satisfeito",
-        "Satisfeito",
-        "Insatisfeito",
-        "Muito insatisfeito"
+    "frequencia_decrescente": [
+        ("Sempre", 1),
+        ("Frequentemente", 2),
+        ("Às vezes", 3),
+        ("Raramente", 4),
+        ("Nunca", 5),
+    ],
+    # GRAU / INTENSIDADE
+    "grau_crescente": [
+        ("Muito pouco", 1),
+        ("Pouco", 2),
+        ("De certa forma", 3),
+        ("Em boa parte", 4),
+        ("Em grande parte", 5),
     ],
 
-    "concordancia": [
-        "Sim, com certeza",
-        "Sim, até certo ponto",
-        "Sim, mas muito pouco",
-        "Não, realmente não"
+    "grau_decrescente": [
+        ("Em grande parte", 1),
+        ("Em boa parte", 2),
+        ("De certa forma", 3),
+        ("Pouco", 4),
+        ("Muito pouco", 5),
+    ],
+    # SATISFAÇÃO
+    "satisfacao_crescente": [
+        ("Muito insatisfeito", 1),
+        ("Insatisfeito", 2),
+        ("Satisfeito", 3),
+        ("Muito satisfeito", 4),
     ],
 
-    "avaliacao_saude": [
-        "Excelente",
-        "Muito boa",
-        "Boa",
-        "Razoável",
-        "Ruim"
+    "satisfacao_decrescente": [
+        ("Muito satisfeito", 1),
+        ("Satisfeito", 2),
+        ("Insatisfeito", 3),
+        ("Muito insatisfeito", 4),
+    ],
+    # SAÚDE GERAL
+    "saude_crescente": [
+        ("Ruim", 1),
+        ("Razoável", 2),
+        ("Boa", 3),
+        ("Muito boa", 4),
+        ("Excelente", 5),
     ],
 
-    "grau": [
-        "Em grande parte",
-        "Em boa parte",
-        "De certa forma",
-        "Pouco",
-        "Muito pouco"
+    "saude_decrescente": [
+        ("Excelente", 1),
+        ("Muito boa", 2),
+        ("Boa", 3),
+        ("Razoável", 4),
+        ("Ruim", 5),
+    ],
+    # IMPACTO NEGATIVO TRABALHO → VIDA
+    "impacto_negativo_crescente": [
+        ("Não, realmente não", 1),
+        ("Sim, mas muito pouco", 2),
+        ("Sim, até certo ponto", 3),
+        ("Sim, com certeza", 4),
     ],
 
+    "impacto_negativo_decrescente": [
+        ("Sim, com certeza", 1),
+        ("Sim, até certo ponto", 2),
+        ("Sim, mas muito pouco", 3),
+        ("Não, realmente não", 4),
+    ],
+    
     "evento": [
-    "Não",
-    "Sim, diariamente",
-    "Sim, semanalmente",
-    "Sim, mensalmente",
-    "Sim, poucas vezes"
+        ("Não", 0),
+        ("Sim", 1),
 ]
 }
 
 # FUNÇÕES AUXILIARES
-
 def nome_seguro(texto):
     return re.sub(r"[^\w\-]", "_", texto.lower())
 
@@ -264,7 +363,7 @@ def classificar_risco(media):
     else:
         return "🔴 Risco para a Saúde - Alto risco - Intervenção imediata, revisão organizacional. Alto risco psicossocial."
 
-def gerar_pdf(empresa, total, resultados):
+def gerar_pdf(empresa, total, resultados, eventos):
     nome = nome_seguro(empresa)
     data = datetime.now().strftime("%Y%m%d_%H%M")
     caminho = os.path.join(PASTA_RELATORIOS, f"relatorio_{nome}_{data}.pdf")
@@ -272,18 +371,70 @@ def gerar_pdf(empresa, total, resultados):
     estilos = getSampleStyleSheet()
     elementos = []
 
-    elementos.append(Paragraph("Relatório Psicossocial", estilos["Title"]))
+    # =============================
+    # CAPA
+    # =============================
+    elementos.append(Paragraph("Relatório de Avaliação Psicossocial", estilos["Title"]))
     elementos.append(Spacer(1, 20))
-    elementos.append(Paragraph(f"Empresa: {empresa}", estilos["Normal"]))
-    elementos.append(Paragraph(f"Participantes: {total}", estilos["Normal"]))
-    elementos.append(Spacer(1, 20))
+    elementos.append(Paragraph(f"<b>Empresa:</b> {empresa}", estilos["Normal"]))
+    elementos.append(Paragraph(f"<b>Participantes:</b> {total}", estilos["Normal"]))
+    elementos.append(Spacer(1, 30))
 
-    for dim, media in sorted(resultados.items()):
-     elementos.append(Paragraph(f"<b>Dimensão:</b> {dim}", estilos["Heading2"]))
-    elementos.append(Paragraph(f"<b>Média da dimensão:</b> {media}", estilos["Normal"]))
-    elementos.append(Paragraph(classificar_risco(media), estilos["Normal"]))
+    # =============================
+    # DIMENSÕES COM PONTUAÇÃO
+    # =============================
+    for dim, media in resultados.items():
+        elementos.append(Paragraph(dim, estilos["Heading2"]))
+        elementos.append(Spacer(1, 8))
+
+        elementos.append(
+            Paragraph(f"<b>Média da dimensão:</b> {media}", estilos["Normal"])
+        )
+
+        elementos.append(
+            Paragraph(classificar_risco(media), estilos["Normal"])
+        )
+
+        elementos.append(Spacer(1, 20))
+
+    # =============================
+    # DIMENSÃO 11 — EVENTOS (SEMPRE EXIBIR)
+    # =============================
+    elementos.append(Spacer(1, 30))
+    elementos.append(
+        Paragraph("Comportamentos Ofensivos e Eventos Críticos", estilos["Heading1"])
+    )
     elementos.append(Spacer(1, 15))
 
+    elementos.append(
+        Paragraph(
+            "⚠️ Os itens abaixo representam ocorrência de eventos e "
+            "não geram pontuação ou classificação de risco.",
+            estilos["Italic"]
+        )
+    )
+
+    elementos.append(Spacer(1, 10))
+
+    if eventos:
+        for evento, total_eventos in eventos.items():
+            elementos.append(
+                Paragraph(
+                    f"• <b>{evento}</b>: {total_eventos} ocorrência(s)",
+                    estilos["Normal"]
+                )
+            )
+    else:
+        elementos.append(
+            Paragraph(
+                "• Não foram registradas ocorrências de comportamentos ofensivos "
+                "ou eventos críticos no período avaliado.",
+                estilos["Normal"]
+            )
+        )
+    # =============================
+    # GERA PDF
+    # =============================
     SimpleDocTemplate(caminho, pagesize=A4).build(elementos)
     return caminho
 # ==================================================
@@ -308,11 +459,10 @@ def empresa():
 def novo():
     return redirect(url_for("questionario"))
 
+
 @app.route("/questionario", methods=["GET", "POST"])
 def questionario():
-    # ==========================
-    # POST → salva respostas
-    # ==========================
+
     if request.method == "POST":
         conn = conectar_db()
         c = conn.cursor()
@@ -324,38 +474,47 @@ def questionario():
         )
         participante_id = c.lastrowid
 
-        # ===============================
-        # Salva respostas e eventos
-        # ===============================
         for campo, valor in request.form.items():
 
-            if campo.startswith("pergunta_"):
-                pergunta_id = int(campo.replace("pergunta_", ""))
-                resposta_valor = int(valor)
+            if not campo.startswith("pergunta_"):
+                continue
 
-                # Salva resposta principal
+            pergunta_id = int(campo.replace("pergunta_", ""))
+            resposta_valor = int(valor)
+
+            # Descobre o tipo da pergunta
+            c.execute("SELECT escala FROM pergunta WHERE id = ?", (pergunta_id,))
+            escala = c.fetchone()[0]
+
+            # =========================
+            # PERGUNTA NORMAL (COPSOQ)
+            # =========================
+            if escala != "evento":
                 c.execute(
-                    "INSERT INTO resposta (participante_id, pergunta_id, valor) VALUES (?, ?, ?)",
+                    """
+                    INSERT INTO resposta (participante_id, pergunta_id, valor)
+                    VALUES (?, ?, ?)
+                    """,
                     (participante_id, pergunta_id, resposta_valor)
                 )
 
-                # Se houve evento, salva origens
-                if resposta_valor > 0:
-                    origens = request.form.getlist(f"origem_{pergunta_id}")
-
-                    for origem in origens:
-                        c.execute(
-                            """
-                            INSERT INTO evento_origem
-                            (participante_id, pergunta_id, origem)
-                            VALUES (?, ?, ?)
-                            """,
-                            (participante_id, pergunta_id, origem)
-                        )
+            # =========================
+            # EVENTO (registro apenas)
+            # =========================
+            elif resposta_valor > 0:
+                origens = request.form.getlist(f"origem_{pergunta_id}")
+                for origem in origens:
+                    c.execute(
+                        """
+                        INSERT INTO evento_origem
+                        (participante_id, pergunta_id, origem)
+                        VALUES (?, ?, ?)
+                        """,
+                        (participante_id, pergunta_id, origem)
+                    )
 
         conn.commit()
         conn.close()
-
         return redirect(url_for("continuar"))
 
     # ==========================
@@ -363,12 +522,14 @@ def questionario():
     # ==========================
     conn = conectar_db()
     c = conn.cursor()
+
     c.execute("""
-        SELECT p.id, p.texto, p.escala, p.invertida
-        FROM pergunta p
-        ORDER BY p.id
+        SELECT id, texto, escala
+        FROM pergunta
+        ORDER BY id
     """)
     perguntas = c.fetchall()
+
     conn.close()
 
     return render_template(
@@ -417,78 +578,103 @@ def continuar():
 def finalizar():
     conn = conectar_db()
     c = conn.cursor()
+
     # =============================
-    # 1️⃣ Buscar todas as respostas, incluindo a dimensão e se é invertida
+    # 1️⃣ Respostas COPSOQ
     # =============================
     c.execute("""
-        SELECT d.nome AS dimensao, r.valor, p.invertida, p.valor_maximo
+        SELECT
+            pa.id,
+            d.nome,
+            r.valor
         FROM resposta r
         JOIN pergunta p ON r.pergunta_id = p.id
         JOIN dimensao d ON p.dimensao_id = d.id
         JOIN participante pa ON r.participante_id = pa.id
         WHERE pa.empresa_id = ?
-          AND p.escala != 'evento'
-        ORDER BY d.id
+        ORDER BY d.id, pa.id
     """, (empresa_id_atual,))
-    
-    dados = c.fetchall()  # lista de tuplas: (dimensao, valor, invertida, valor_maximo)
+    dados = c.fetchall()
 
     # =============================
-    # 2️⃣ Buscar o nome da empresa
+    # 2️⃣ Eventos
+    # =============================
+    c.execute("""
+        SELECT
+            p.texto,
+            COUNT(*) 
+        FROM evento_origem eo
+        JOIN pergunta p ON eo.pergunta_id = p.id
+        JOIN participante pa ON eo.participante_id = pa.id
+        WHERE pa.empresa_id = ?
+        GROUP BY p.texto
+    """, (empresa_id_atual,))
+    eventos = dict(c.fetchall())
+
+    # =============================
+    # 3️⃣ Empresa e participantes
     # =============================
     c.execute("SELECT nome FROM empresa WHERE id = ?", (empresa_id_atual,))
     empresa_nome = c.fetchone()[0]
+
+    c.execute(
+        "SELECT COUNT(*) FROM participante WHERE empresa_id = ?",
+        (empresa_id_atual,)
+    )
+    total_participantes = c.fetchone()[0]
+
     conn.close()
 
     # =============================
-    # 3️⃣ Agrupar respostas por dimensão
+    # 4️⃣ Agrupamento COPSOQ
     # =============================
-    respostas_por_dimensao = {}  # chave: dimensão, valor: lista de respostas
+    respostas_por_dimensao = {}
 
-    for dim, valor, invertida, valor_maximo in dados:
-        if invertida:
-            valor = valor_maximo - valor  # corrige perguntas invertidas
-        respostas_por_dimensao.setdefault(dim, []).append(valor)
+    for participante_id, dimensao, valor in dados:
+        respostas_por_dimensao \
+            .setdefault(dimensao, {}) \
+            .setdefault(participante_id, []) \
+            .append(valor)
 
-    # =============================
-    # 4️⃣ Calcular média única por dimensão
-    # =============================
     medias_dimensao = {}
-    for dim, valores in respostas_por_dimensao.items():
-        medias_dimensao[dim] = round(sum(valores) / len(valores), 2)
+    for dimensao, participantes in respostas_por_dimensao.items():
+        medias_individuais = [
+            sum(respostas) / len(respostas)
+            for respostas in participantes.values()
+        ]
+        medias_dimensao[dimensao] = round(
+            sum(medias_individuais) / len(medias_individuais), 2
+        )
 
     # =============================
-    # 5️⃣ Total de participantes (para referência no PDF)
+    # 5️⃣ PDF
     # =============================
-    total_participantes = len(set([r[0] for r in dados]))  # não usado para cálculo, só para PDF
+    caminho_pdf = gerar_pdf(
+        empresa_nome,
+        total_participantes,
+        medias_dimensao,
+        eventos
+    )
 
     # =============================
-    # 6️⃣ Gerar PDF
-    # =============================
-    caminho_pdf = gerar_pdf(empresa_nome, total_participantes, medias_dimensao)
-
-    # =============================
-    # 7️⃣ Salvar relatório no banco
+    # 6️⃣ Salva relatório
     # =============================
     conn = conectar_db()
     c = conn.cursor()
     c.execute(
-        "INSERT INTO relatorio (empresa_id, caminho_pdf, data) VALUES (?, ?, ?)",
+        """
+        INSERT INTO relatorio (empresa_id, caminho_pdf, data)
+        VALUES (?, ?, ?)
+        """,
         (empresa_id_atual, caminho_pdf, datetime.now().strftime("%Y-%m-%d %H:%M"))
     )
     conn.commit()
     conn.close()
 
-    # =============================
-    # 8️⃣ Renderizar página de encerramento
-    # =============================
     return render_template("encerramento.html")
 
-# ==================================================
-# INIT
-# ==================================================
+
 criar_tabelas()
 migrar_perguntas()
-
 if __name__ == "__main__":
     app.run(debug=True)
